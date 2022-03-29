@@ -6,7 +6,7 @@ if (os_type != os_windows) {
 	return;
 }
 
-#macro SCID "00000000-0000-0000-0000-000000000000"
+#macro SCID "00000000-0000-0000-0000-00007f46847d"
 
 show_debug_message("##### Initialising GDK #####");
 
