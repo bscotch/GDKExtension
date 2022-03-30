@@ -219,6 +219,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>C:\ProgramData\GameMakerStudio2-beta\Cache\runtimes\runtime-2022.300.0.475\yyc\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -465,6 +466,9 @@ nmake /E /F Makefile.msvc install</Command>
     <ClInclude Include="Stats.h" />
     <ClInclude Include="UserManagement.h" />
     <ClInclude Include="YYRValue.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
