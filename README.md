@@ -26,7 +26,7 @@ This repository contains the source code for the DLL that implements the GDK fun
 
 
 1. Install VS2019 - see https://visualstudio.microsoft.com/downloads/ 
-2. Install GDK - see https://github.com/microsoft/GDK/releases/tag/October_2021_Republish
+2. Install GDK - see https://github.com/microsoft/GDK/releases/tag/June_2023
 3. Install CMAKE - see https://cmake.org/download/
 4. Clone this repository (NOTE: This repository has submodules)
 5. Open the Visual Studio 2019
@@ -43,6 +43,10 @@ This repository contains the source code for the DLL that implements the GDK fun
 
 Open the GMS2 Project in this repository from GDK_Project_GMS2/GDK_Project_GMS2.yyp file.
 
-> **NOTE**: Full documentation is in the project included files.
+---
+
+## Documentation
+
+We provide both a PDF version of the documentation included with the extension and inside the demo project (datafiles) and a fully converted version to the [Github Wiki](https://github.com/YoYoGames/GDKExtension/wiki) format (the latter will be the most up-to-date version, the other will follow shortly after). *If there are any PR requests with new feature implementation please make sure you also provide the documentation for the implemented features.*
 
 ---

@@ -3,7 +3,7 @@
   "options": [],
   "exportToGame": true,
   "supportedTargets": -1,
-  "extensionVersion": "1.0.6",
+  "extensionVersion": "1.0.7",
   "packageId": "",
   "productId": "",
   "author": "",
@@ -98,6 +98,11 @@
         {"externalName":"F_XboxOneGamerTagForUser","kind":1,"help":"xboxone_gamertag_for_user(user_id)","hidden":false,"returnType":1,"argCount":0,"args":[
             2,
           ],"resourceVersion":"1.0","name":"xboxone_gamertag_for_user","tags":[],"resourceType":"GMExtensionFunction",},
+        {"externalName":"F_XboxOneGetAchievement","kind":1,"help":"xboxone_get_achievement(user_id, achievement_id)","hidden":false,"returnType":2,"argCount":0,"args":[
+            2,
+            1,
+          ],"resourceVersion":"1.0","name":"xboxone_get_achievement","tags":[],"resourceType":"GMExtensionFunction",},
+        {"externalName":"F_XboxOneUpdateRecentPlayers","kind":1,"help":"xboxone_update_recent_players(user_id,recent_user_id)","hidden":false,"returnType":2,"argCount":0,"args":[],"resourceVersion":"1.0","name":"xboxone_update_recent_players","tags":[],"resourceType":"GMExtensionFunction",},
       ],"constants":[],"ProxyFiles":[],"copyToTargets":64,"order":[
         {"name":"gdk_init","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"gdk_update","path":"extensions/GDKExtension/GDKExtension.yy",},
@@ -122,6 +127,7 @@
         {"name":"xboxone_stats_get_leaderboard","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"xboxone_stats_get_social_leaderboard","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"xboxone_achievements_set_progress","path":"extensions/GDKExtension/GDKExtension.yy",},
+        {"name":"xboxone_get_achievement","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"xboxone_read_player_leaderboard","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"xboxone_set_rich_presence","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"xboxone_check_privilege","path":"extensions/GDKExtension/GDKExtension.yy",},
@@ -157,6 +163,7 @@
         {"name":"ms_iap_UnmountPackage","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"xboxone_get_token_and_signature","path":"extensions/GDKExtension/GDKExtension.yy",},
         {"name":"xboxone_gamertag_for_user","path":"extensions/GDKExtension/GDKExtension.yy",},
+        {"name":"xboxone_update_recent_players","path":"extensions/GDKExtension/GDKExtension.yy",},
       ],"resourceVersion":"1.0","name":"","tags":[],"resourceType":"GMExtensionFile",},
   ],
   "classname": "",

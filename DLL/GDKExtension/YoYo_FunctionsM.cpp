@@ -2443,6 +2443,174 @@ void F_XboxOneSetAchievementProgress(RValue& Result, CInstance* selfinst, CInsta
 }
 
 YYEXPORT
+void F_XboxOneGetAchievement(RValue& Result, CInstance* selfinst, CInstance* otherinst, int argc, RValue* arg)
+{
+	Result.kind = VALUE_REAL;
+	Result.val = -1;
+
+	uint64 user_id = (uint64)YYGetInt64(arg, 0);
+	const char* achievement = YYGetString(arg, 1);
+
+	XblContextHandle xbl_ctx;
+
+	{
+		XUM_LOCK_MUTEX;
+
+		XUMuser* user = XUM::GetUserFromId(user_id);
+		if (user == NULL)
+		{
+			DebugConsoleOutput("xboxlive_get_achievement - couldn't find user_id\n");
+
+			Result.val = -1;
+			return;
+		}
+
+		HRESULT hr = XblContextCreateHandle(user->user, &xbl_ctx);
+		if (xbl_ctx == nullptr)
+		{
+			DebugConsoleOutput("xboxlive_get_achievement - couldn't get xbl handle\n");
+
+			Result.val = -2;
+			return;
+		}
+	}
+
+	struct GetAchievementProgressContext
+	{
+		uint64 user_id;
+		char* achievement;
+
+		XblContextHandle xbl_ctx;
+		int request_id;
+
+		XAsyncBlock async;
+
+		GetAchievementProgressContext(uint64 user_id, const char* achievement, XblContextHandle xbl_ctx, int request_id) :
+			user_id(user_id),
+			achievement((char*)(YYStrDup(achievement))),
+			xbl_ctx(xbl_ctx),
+			request_id(request_id) {}
+
+		~GetAchievementProgressContext()
+		{
+			XblContextCloseHandle(xbl_ctx);
+			YYFree(achievement);
+		}
+	};
+
+	int request_id = g_currXBLAchievementRequestID++;
+	if (g_currXBLAchievementRequestID < 0)
+	{
+		/* In case of overflow. */
+		g_currXBLAchievementRequestID = 0;
+	}
+
+	GetAchievementProgressContext* ctx = new GetAchievementProgressContext(user_id, achievement, xbl_ctx, request_id);
+
+	ctx->async.queue = NULL;
+	ctx->async.context = ctx;
+	ctx->async.callback = [](XAsyncBlock* async)
+	{
+		GetAchievementProgressContext* ctx = (GetAchievementProgressContext*)(async->context);
+
+		/* Delete context when callback returns. */
+		std::unique_ptr<GetAchievementProgressContext> ctx_guard(ctx);
+
+		int dsMapIndex = CreateDsMap(3,
+			"event_type", (double)0.0, "achievement info",
+			"requestID", (double)(ctx->request_id), NULL,
+			"achievement", 0.0, ctx->achievement);
+
+		DsMapAddInt64(dsMapIndex, "userID", ctx->user_id);
+
+		HRESULT status = XAsyncGetStatus(async, false);
+		if (!SUCCEEDED(status))
+		{
+			DebugConsoleOutput("xboxlive_get_achievement - XblAchievementsGetAchievementAsync failed (HRESULT 0x%08X)\n", (unsigned)(status));
+		}
+		else
+		{
+			XblAchievementsResultHandle result;
+			status = XblAchievementsGetAchievementResult(async, &result);
+			if (!SUCCEEDED(status))
+			{
+				DebugConsoleOutput("xboxlive_get_achievement - XblAchievementsGetAchievementResult failed (HRESULT 0x%08X)\n", (unsigned)(status));
+			}
+			else
+			{
+				const XblAchievement* achievements;
+				size_t num_achievements;
+				status = XblAchievementsResultGetAchievements(result, &achievements, &num_achievements);
+				if (!SUCCEEDED(status))
+				{
+					DebugConsoleOutput("xboxlive_get_achievement - XblAchievementsResultGetAchievements failed (HRESULT 0x%08X)\n", (unsigned)(status));
+				}
+				else
+				{
+					if (num_achievements < 1)
+					{
+						status = -1;
+						DebugConsoleOutput("xboxlive_get_achievement - invalid result\n");
+					}
+					else
+					{
+						const XblAchievement* ach = &(achievements[0]);
+						DsMapAddString(dsMapIndex, "name", (char*)(ach->name));
+						DsMapAddInt64(dsMapIndex, "progress_state", (int)(ach->progressState));
+
+						// Calculate progress percent
+						int targetValue = 0;
+						int currentValue = 0;
+
+						for (int i = 0; i < ach->progression.requirementsCount; i++)
+						{
+							XblAchievementRequirement* req = &(ach->progression.requirements[i]);
+
+							currentValue += atoi(req->currentProgressValue);
+							targetValue += atoi(req->targetProgressValue);
+						}
+
+						int progress = (ach->progressState == XblAchievementProgressState::Achieved) ? 100 : 0;
+						if (targetValue > 0)
+						{
+							progress = (currentValue * 100) / targetValue;
+						}
+
+						if (progress > 100)
+						{
+							progress = 100;
+						}
+
+						DsMapAddInt64(dsMapIndex, "progress", progress);
+					}
+				}
+
+				XblAchievementsResultCloseHandle(result);
+			}
+		}
+
+		DsMapAddInt64(dsMapIndex, "error", status);
+
+		CreateAsyncEventWithDSMap(dsMapIndex, EVENT_OTHER_SYSTEM_EVENT);
+	};
+
+	HRESULT status = XblAchievementsGetAchievementAsync(xbl_ctx, user_id, g_XboxSCID, achievement, &(ctx->async));
+	if (SUCCEEDED(status))
+	{
+		Result.val = request_id;
+	}
+	else
+	{
+		DebugConsoleOutput("xboxlive_get_achievement - XblAchievementsGetAchievementAsync failed (HRESULT 0x%08X)\n", (unsigned)(status));
+		delete ctx;
+
+		Result.val = -1 * status;
+		return;
+	}
+}
+
+
+YYEXPORT
 void F_XboxOneSetRichPresence(RValue& Result, CInstance* selfinst, CInstance* otherinst, int argc, RValue* arg)
 {
 	Result.kind = VALUE_REAL;
@@ -2523,6 +2691,84 @@ void F_XboxOneSetRichPresence(RValue& Result, CInstance* selfinst, CInstance* ot
 	}
 
 	Result.val = 0;
+}
+
+YYEXPORT
+void F_XboxOneUpdateRecentPlayers(RValue& Result, CInstance* selfinst, CInstance* otherinst, int argc, RValue* arg)
+{
+	Result.kind = VALUE_REAL;
+	Result.val = -1;
+
+#if defined(_GAMING_XBOX)
+	uint64 user_id = (uint64)YYGetInt64(arg, 0); // don't do any rounding on this
+	XblContextHandle xbl_ctx;
+
+	{
+		XUM_LOCK_MUTEX;
+		XUMuser* user = XUM::GetUserFromId(user_id);
+
+		if (user == NULL)
+		{
+			DebugConsoleOutput("xboxone_update_recent_players - couldn't find user_id\n");
+			return;
+		}
+
+		xbl_ctx = user->GetXboxLiveContext();
+
+		if (xbl_ctx == nullptr)
+		{
+			DebugConsoleOutput("xboxone_update_recent_players - couldn't get xbl handle\n");
+			return;
+		}
+	}
+
+	if (argc < 2)
+	{
+		DebugConsoleOutput("xboxone_update_recent_players - no recent users specified\n");
+		return;
+	}
+
+	std::vector<XblMultiplayerActivityRecentPlayerUpdate> recentPlayers;
+	if (KIND_RValue(&(arg[1])) == VALUE_ARRAY)
+	{
+		int arraylength = YYArrayGetLength(&(arg[1]));
+		RValue elem;
+		for (int i = 0; i < arraylength; ++i)
+		{
+			if (GET_RValue(&elem, &(arg[1]), NULL, i) == false)
+				break;
+
+			uint64 recent_user_id = (uint64)YYGetInt64(&elem, 0); // don't do any rounding on this
+			XblMultiplayerActivityRecentPlayerUpdate update{ recent_user_id, XblMultiplayerActivityEncounterType::Default };
+
+			recentPlayers.push_back(update);
+		}
+
+		if (recentPlayers.size() == 0)
+		{
+			DebugConsoleOutput("xboxone_update_recent_players - recent users array is empty\n");
+			return;
+		}
+	}
+	else
+	{
+		uint64 recent_user_id = (uint64)YYGetInt64(arg, 1); // don't do any rounding on this
+		XblMultiplayerActivityRecentPlayerUpdate update{ recent_user_id, XblMultiplayerActivityEncounterType::Default };
+
+		recentPlayers.push_back(update);
+	}
+
+	HRESULT hr = XblMultiplayerActivityUpdateRecentPlayers(xbl_ctx, recentPlayers.data(), recentPlayers.size());
+	if (!SUCCEEDED(hr))
+	{
+		DebugConsoleOutput("xboxone_update_recent_players - couldn't update recent players info (HRESULT 0x%08X)\n", (unsigned)(hr));
+
+		Result.val = hr;
+		return;
+	}
+
+	Result.val = 0;
+#endif
 }
 
 void F_XboxOneSetServiceConfigurationID(RValue& Result, CInstance* selfinst, CInstance* otherinst, int argc, RValue* arg)
